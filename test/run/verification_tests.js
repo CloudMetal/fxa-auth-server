@@ -383,6 +383,56 @@ TestServer.start(config.public_url)
         )
     }
   )
+ 
+  test(
+    'create account allows localization of emails',
+    function (t) {
+      var email = uniqueID() +'@example.com'
+      var password = 'allyourbasearebelongtous'
+      var client = null
+      var verifyCode = null
+      return Client.create(config.public_url, email, password)
+        .then(
+          function (x) {
+            client = x
+          }
+        )
+        .then(
+          function () {
+            return waitForCode(email)
+          }
+        )
+        .then(
+          function (code) {
+            t.assert(emailContents[email].indexOf('Welcome') !== -1, 'is en')
+            t.assert(emailContents[email].indexOf('GDay') === -1, 'not en-AU')
+            return client.destroyAccount()
+          }
+        )
+        .then(
+          function () {
+            return Client.create(config.public_url, email, password, { lang: 'en-AU' })
+          }
+        )
+        .then(
+          function (x) {
+            client = x
+          }
+        )
+        .then(
+          function () {
+            return waitForCode(email)
+          }
+        )
+        .then(
+          function (code) {
+            t.assert(emailContents[email].indexOf('Welcome') === -1, 'not en')
+            t.assert(emailContents[email].indexOf('GDay') !== -1, 'is en-AU')
+            return client.destroyAccount()
+          }
+        )
+    }
+  )
 
   test(
     'teardown',
@@ -408,6 +458,7 @@ var mail = new Mail('127.0.0.1', true)
 var codeMatch = /X-\w+-Code: (\w+)/
 var toMatch = /To: (\w+@\w+\.\w+)/
 var emailCodes = {}
+var emailContents = {}
 
 // This test helper creates fresh account for the given email and password.
 function createFreshAccount(email, password) {
@@ -437,6 +488,7 @@ mail.on(
     var matchEmail = toMatch.exec(email)
     if (matchCode && matchEmail) {
       emailCodes[matchEmail[1]] = matchCode[1]
+      emailContents[matchEmail[1]] = email
     }
     else {
       console.error('No verify code match')

@@ -63,7 +63,7 @@ module.exports = function (log, isA, error, public_url, Client, crypto, db, isPr
             public_url,
             Buffer(form.email, 'hex').toString('utf8'),
             form.password,
-            form.preVerified || false
+            { preVerified: form.preVerified || false}
           )
           .done(
             function (client) {
